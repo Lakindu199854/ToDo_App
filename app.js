@@ -221,6 +221,16 @@ function renderTask(task) {
     summary.focus();
     openTaskDialog(task.owner_slot, task);
   });
+  actions.append(edit);
+  if (task.planned_date < dateInput.max) {
+    const forward = control("quiet button", "calendar", "Forward to next day");
+    forward.addEventListener("click", () => {
+      menu.open = false;
+      summary.focus();
+      forwardTask(task);
+    });
+    actions.append(forward);
+  }
   const remove = control("quiet button delete-action", "trash", "Delete");
   remove.addEventListener("click", () => {
     menu.open = false;
@@ -230,7 +240,7 @@ function renderTask(task) {
     setMessage(el("delete-error"));
     deleteDialog.showModal();
   });
-  actions.append(edit, remove);
+  actions.append(remove);
   menu.append(summary, actions);
   row.append(menu);
 
@@ -371,6 +381,7 @@ async function selectDate(date, { localToday = date === today && localDates.ever
   tasks = [];
   renderColumns();
   showBoardError();
+  el("board-notice").hidden = true;
   await refreshTasks(true);
 }
 
@@ -387,29 +398,33 @@ function refreshToday() {
   }
 }
 
-async function saveChanges(task, patch, isNew = false) {
+async function saveChanges(task, patch, { isNew = false, fromDate } = {}) {
   if (demoMode) {
+    if (fromDate && !demoTasks.some((item) => item.id === task.id && item.planned_date === fromDate)) return false;
     const next = isNew
       ? [...demoTasks, { ...task, ...patch, completed: false, created_at: new Date().toISOString() }]
       : demoTasks.map((item) => item.id === task.id ? { ...item, ...patch } : item);
     storeDemoTasks(next);
-    return;
+    return true;
   }
 
   if (isNew) {
     try {
       await requestTasks({}, { method: "POST", data: { ...task, ...patch } });
-      return;
+      return true;
     } catch (error) {
       if (error.code !== "23505") throw error;
       // Retry the same task if the server saved it before the connection dropped.
     }
   }
 
-  const rows = await requestTasks({ id: "eq." + task.id, select: "id" }, {
+  const filters = { id: "eq." + task.id, select: "id" };
+  if (fromDate) filters.planned_date = "eq." + fromDate;
+  const rows = await requestTasks(filters, {
     method: "PATCH", data: patch, returnRows: true,
   });
-  if (!rows.length) throw new Error("Task is no longer available.");
+  if (!rows.length && !fromDate) throw new Error("Task is no longer available.");
+  return rows.length > 0;
 }
 
 async function toggleTask(task) {
@@ -421,6 +436,29 @@ async function toggleTask(task) {
     announce(task.completed ? "Task marked incomplete." : "Task completed.");
   } catch {
     showBoardError("Couldn’t update the task. Try again.");
+  } finally {
+    pendingTasks.delete(task.id);
+  }
+}
+
+async function forwardTask(task) {
+  if (pendingTasks.has(task.id)) return;
+  const nextDate = shiftDate(task.planned_date, 1);
+  pendingTasks.add(task.id);
+  try {
+    const moved = await saveChanges(task, { planned_date: nextDate }, { fromDate: task.planned_date });
+    await refreshTasks();
+    if (!moved) {
+      showBoardError("This task has changed. Check its current planned date.");
+      return;
+    }
+    const message = "Task moved to " + shortDate.format(asCalendarDate(nextDate)) + ".";
+    el("board-notice-text").textContent = message;
+    el("view-forwarded-day").dataset.date = nextDate;
+    el("board-notice").hidden = false;
+    announce(message);
+  } catch {
+    showBoardError("Couldn’t forward the task. Try again.");
   } finally {
     pendingTasks.delete(task.id);
   }
@@ -490,7 +528,7 @@ async function submitTask(event) {
   el("save-task").disabled = true;
   setMessage(el("task-error"));
   try {
-    await saveChanges(task, patch, isNew);
+    await saveChanges(task, patch, { isNew });
     taskDialog.close();
     if (plannedDate === dateForSlot(task.owner_slot)) await refreshTasks();
     else {
@@ -561,6 +599,10 @@ dateInput.addEventListener("change", () => {
   else dateInput.value = activeDate;
 });
 el("board-retry").addEventListener("click", () => refreshTasks(true));
+el("view-forwarded-day").addEventListener("click", async (event) => {
+  await selectDate(event.currentTarget.dataset.date);
+  el("board-title").focus();
+});
 dateOnlyInput.addEventListener("change", () => {
   const { date, time } = readDeadline();
   setDeadline(date, time);

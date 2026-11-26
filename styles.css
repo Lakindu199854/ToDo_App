@@ -294,7 +294,9 @@ h1, h2, h3, p { margin: 0; }
 .empty-state strong { color: var(--ink); margin-bottom: 4px; }
 .board-footer { display: flex; justify-content: center; align-items: center; gap: 7px; padding: 23px 0 30px; color: var(--muted); text-align: center; font-size: .875rem; }
 .board-footer .icon { color: #7959c5; width: 15px; height: 15px; }
-.board-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 11px; margin-bottom: 12px; border: 1px solid #f3d9e2; border-radius: 10px; background: #fff4f7; color: #862042; font-size: .9375rem; }
+.board-error, .board-notice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 11px; margin-bottom: 12px; border: 1px solid; border-radius: 10px; font-size: .9375rem; }
+.board-error { border-color: #f3d9e2; background: #fff4f7; color: #862042; }
+.board-notice { border-color: var(--border); background: #f2ecfb; color: #443663; }
 
 .dialog-heading h2 { font: 800 1.5rem/1.22 var(--heading); letter-spacing: -.04em; }
 .dialog-heading p { margin-top: 6px; color: var(--muted); line-height: 1.5; }
