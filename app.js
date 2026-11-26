@@ -441,6 +441,7 @@ function openTaskDialog(slot, task) {
   el("save-task").textContent = task ? "Save changes" : "Add task";
   setMessage(el("task-error"));
   taskDialog.showModal();
+  if (matchMedia("(min-width: 601px) and (pointer: fine)").matches) taskForm.elements.title.focus();
 }
 
 async function submitTask(event) {

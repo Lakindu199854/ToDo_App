@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=5">
   <script src="./config.js?v=4" defer></script>
   <script src="./time-zones.js" defer></script>
-  <script src="./app.js?v=4" defer></script>
+  <script src="./app.js?v=5" defer></script>
   <script src="./planning.js" defer></script>
 </head>
 <body>
@@ -139,29 +139,31 @@
           <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
         </button>
       </div>
-      <label class="field">Task name <input name="title" placeholder="What do you need to do?" maxlength="120" required autofocus></label>
-      <div class="field-grid">
-        <div>
-          <label class="field">Planned for <input type="date" name="planned_date" min="0001-01-01" max="9999-12-31" required></label>
-          <div class="date-shortcuts" role="group" aria-label="Planned date shortcuts" data-date-field="planned_date">
-            <button class="secondary button" type="button" data-day-offset="0">Today</button>
-            <button class="secondary button" type="button" data-day-offset="-1">Yesterday</button>
+      <div class="task-fields">
+        <label class="field">Task name <input name="title" placeholder="What do you need to do?" maxlength="120" required></label>
+        <div class="field-grid">
+          <div>
+            <label class="field">Planned for <input type="date" name="planned_date" min="0001-01-01" max="9999-12-31" required></label>
+            <div class="date-shortcuts" role="group" aria-label="Planned date shortcuts" data-date-field="planned_date">
+              <button class="secondary button" type="button" data-day-offset="0">Today</button>
+              <button class="secondary button" type="button" data-day-offset="-1">Yesterday</button>
+            </div>
           </div>
+          <label class="field">Estimated minutes <input type="number" name="estimated_minutes" min="1" max="1440" placeholder="Optional"></label>
         </div>
-        <label class="field">Estimated minutes <input type="number" name="estimated_minutes" min="1" max="1440" placeholder="Optional"></label>
-      </div>
-      <div class="field-grid">
-        <div>
-          <label class="field">Due date <input type="date" name="due_date" min="0001-01-01" max="9999-12-31"></label>
-          <div class="date-shortcuts" role="group" aria-label="Due date shortcuts" data-date-field="due_date">
-            <button class="secondary button" type="button" data-day-offset="0">Today</button>
-            <button class="secondary button" type="button" data-day-offset="-1">Yesterday</button>
+        <div class="field-grid">
+          <div>
+            <label class="field">Due date <input type="date" name="due_date" min="0001-01-01" max="9999-12-31"></label>
+            <div class="date-shortcuts" role="group" aria-label="Due date shortcuts" data-date-field="due_date">
+              <button class="secondary button" type="button" data-day-offset="0">Today</button>
+              <button class="secondary button" type="button" data-day-offset="-1">Yesterday</button>
+            </div>
           </div>
+          <label class="field">Due time <input type="time" name="due_time"></label>
         </div>
-        <label class="field">Due time <input type="time" name="due_time"></label>
+        <label class="field">Notes <textarea name="notes" rows="2" maxlength="1000" placeholder="Optional"></textarea></label>
+        <p id="task-error" class="form-error" role="alert" hidden></p>
       </div>
-      <label class="field">Notes <textarea name="notes" rows="2" maxlength="1000" placeholder="Optional"></textarea></label>
-      <p id="task-error" class="form-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button class="secondary button dialog-close" type="button">Cancel</button>
         <button id="save-task" class="primary button" type="submit">Add task</button>
