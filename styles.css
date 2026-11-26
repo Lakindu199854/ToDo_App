@@ -323,6 +323,10 @@ dialog::backdrop { background: #271a4766; }
 .field input::placeholder, .field textarea::placeholder { color: #776c87; }
 .date-shortcuts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .date-shortcuts .button { min-height: 32px; padding: 3px 8px; }
+.deadline-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px 12px; margin-top: 6px; }
+.deadline-actions .date-shortcuts { margin-top: 0; }
+.date-only-option { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; color: #443953; font-size: .875rem; font-weight: 700; cursor: pointer; }
+.date-only-option input { width: 17px; height: 17px; margin: 0; accent-color: var(--purple); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 3px; }
 .form-error { color: #9b2447; font-size: .875rem; line-height: 1.4; }
 .delete-task-name { color: var(--muted); overflow-wrap: anywhere; }
@@ -397,7 +401,7 @@ dialog::backdrop { background: #271a4766; }
     border-top: 1px solid var(--border);
   }
   .date-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #task-form .button { min-height: 44px; }
+  #task-form .button, .date-only-option { min-height: 44px; }
 }
 @media (max-width: 480px) {
   .field-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }

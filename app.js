@@ -15,6 +15,8 @@ const board = el("board");
 const columns = el("columns");
 const taskDialog = el("task-dialog");
 const taskForm = el("task-form");
+const deadlineInput = taskForm.elements.namedItem("deadline");
+const dateOnlyInput = taskForm.elements.namedItem("deadline_date_only");
 const deleteDialog = el("delete-dialog");
 const dateInput = el("date-input");
 const pendingTasks = new Set();
@@ -424,6 +426,20 @@ async function toggleTask(task) {
   }
 }
 
+function readDeadline() {
+  const [date, time] = deadlineInput.value.split("T");
+  return { date: date || null, time: time || null };
+}
+
+function setDeadline(date, time) {
+  if (time) taskDialogEntry.lastDeadlineTime = time;
+  const dateOnly = dateOnlyInput.checked;
+  deadlineInput.type = dateOnly ? "date" : "datetime-local";
+  deadlineInput.min = dateOnly ? "0001-01-01" : "0001-01-01T00:00";
+  deadlineInput.max = dateOnly ? "9999-12-31" : "9999-12-31T23:59";
+  deadlineInput.value = !date ? "" : dateOnly ? date : date + "T" + (taskDialogEntry.lastDeadlineTime || "23:59");
+}
+
 function openTaskDialog(slot, task) {
   const location = taskLocations[slot - 1];
   const original = task ? deadlineInZone(task, location.timeZone) : { date: null, time: null };
@@ -434,8 +450,8 @@ function openTaskDialog(slot, task) {
     taskForm.elements.namedItem(field).value = task?.[field] ?? "";
   }
   taskForm.elements.planned_date.value = task?.planned_date || dateForSlot(slot);
-  taskForm.elements.due_date.value = originalDue.date ?? "";
-  taskForm.elements.due_time.value = originalDue.time ?? "";
+  dateOnlyInput.checked = Boolean(originalDue.date && !originalDue.time);
+  setDeadline(originalDue.date, originalDue.time);
   el("task-dialog-title").textContent = task ? "Edit task" : "Add a task";
   el("task-dialog-person").textContent = boardNames[slot - 1] + " · " + location.city + " time";
   el("save-task").textContent = task ? "Save changes" : "Add task";
@@ -455,8 +471,7 @@ async function submitTask(event) {
     return;
   }
   const plannedDate = data.get("planned_date");
-  const dueTime = data.get("due_time") || null;
-  const dueDate = data.get("due_date") || (dueTime ? plannedDate : null);
+  const { date: dueDate, time: dueTime } = readDeadline();
   const patch = {
     title,
     planned_date: plannedDate,
@@ -466,7 +481,7 @@ async function submitTask(event) {
   if (isNew || dueDate !== originalDue.date || dueTime !== originalDue.time) {
     if (dueTime && localTimeToInstant(dueDate, dueTime, location.timeZone) === null) {
       setMessage(el("task-error"), "That time is skipped when the clocks change in " + location.city + ". Choose another time.");
-      taskForm.elements.due_time.focus();
+      deadlineInput.focus();
       return;
     }
     Object.assign(patch, { due_date: dueDate, due_time: dueTime, due_zone: location.timeZone });
@@ -546,12 +561,18 @@ dateInput.addEventListener("change", () => {
   else dateInput.value = activeDate;
 });
 el("board-retry").addEventListener("click", () => refreshTasks(true));
+dateOnlyInput.addEventListener("change", () => {
+  const { date, time } = readDeadline();
+  setDeadline(date, time);
+});
 taskForm.addEventListener("click", (event) => {
   const shortcut = event.target.closest("[data-day-offset]");
   if (!shortcut) return;
   const { dateField } = shortcut.closest("[data-date-field]").dataset;
   const localDate = currentBoardDate(taskDialogEntry.location.timeZone);
-  taskForm.elements.namedItem(dateField).value = shiftDate(localDate, Number(shortcut.dataset.dayOffset));
+  const date = shiftDate(localDate, Number(shortcut.dataset.dayOffset));
+  if (dateField === "deadline") setDeadline(date, readDeadline().time);
+  else taskForm.elements.namedItem(dateField).value = date;
 });
 taskForm.addEventListener("submit", submitTask);
 el("delete-form").addEventListener("submit", submitDelete);
