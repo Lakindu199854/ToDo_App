@@ -14,9 +14,15 @@ Open [localhost:8000](http://127.0.0.1:8000). When connected to Supabase, the pr
 
 ## Supabase
 
-The app connects to the [Supabase project](https://supabase.com/dashboard/project/tijjoakptzioaizbyshi). The [daily tasks migration](supabase/migrations/20261126000000_board.sql) and [weekly plans migration](supabase/migrations/20261126010000_weekly_plans.sql) grant visitors access through the Data API.
+The app connects to the [Supabase project](https://supabase.com/dashboard/project/tijjoakptzioaizbyshi). The [daily tasks](supabase/migrations/20261126000000_board.sql), [weekly plans](supabase/migrations/20261126010000_weekly_plans.sql), and [deadline time zones](supabase/migrations/20261126020000_task_time_zones.sql) migrations configure the Data API.
 
-For a fresh project, apply both migrations in its SQL Editor and set the project URL and browser-safe publishable key in [config.js](config.js). The default time zone is `Asia/Colombo`.
+For a fresh project, apply the migrations in order and set the project URL and browser-safe publishable key in [config.js](config.js).
+
+## Dates and times
+
+Lakindu’s tasks use Colombo time, and Milanka’s use Milan time. **Today** shows each list’s local date. Selecting a specific calendar day shows that date for both lists. Timed deadlines show both cities. Date-only deadlines use the calendar date entered in the form. The shared planning week begins Sunday in Colombo.
+
+Existing timed deadlines were entered in Colombo time. When editing one, the form shows the same deadline in the task owner’s local time. The app rejects skipped clock times and uses the later occurrence when a Milan clock time repeats.
 
 ## Publish on GitHub Pages
 

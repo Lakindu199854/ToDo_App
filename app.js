@@ -5,12 +5,10 @@ const demoMode = !config.supabaseUrl && !config.supabasePublishableKey;
 const sharedBoardConfigured = config.supabaseUrl && config.supabasePublishableKey.startsWith("sb_publishable_");
 const demoStorageKey = "side-by-side:demo:v1";
 const boardNames = ["Lakindu", "Milanka"];
-const boardCalendar = new Intl.DateTimeFormat("en", {
-  timeZone: config.timeZone, year: "numeric", month: "2-digit", day: "2-digit",
-});
+const taskLocations = config.taskLocations;
 const fullDate = new Intl.DateTimeFormat("en", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric", year: "numeric" });
 const shortDate = new Intl.DateTimeFormat("en", { timeZone: "UTC", month: "short", day: "numeric" });
-const taskSelect = "id,owner_slot,title,notes,planned_date,due_date,due_time,estimated_minutes,completed,created_at";
+const taskSelect = "id,owner_slot,title,notes,planned_date,due_date,due_time,due_at,due_zone,estimated_minutes,completed,created_at";
 const el = (id) => document.getElementById(id);
 
 const board = el("board");
@@ -22,7 +20,9 @@ const dateInput = el("date-input");
 const pendingTasks = new Set();
 
 let today = currentBoardDate();
+let localDates = taskLocations.map(({ timeZone }) => currentBoardDate(timeZone));
 let activeDate = today;
+let showingToday = true;
 let demoTasks;
 let tasks = [];
 let taskDialogEntry;
@@ -73,9 +73,8 @@ function asCalendarDate(date) {
   return new Date(date + "T12:00:00Z");
 }
 
-function currentBoardDate() {
-  const parts = Object.fromEntries(boardCalendar.formatToParts(new Date()).map(({ type, value }) => [type, value]));
-  return [parts.year, parts.month, parts.day].join("-");
+function currentBoardDate(timeZone = config.timeZone) {
+  return zonedDateTime(Date.now(), timeZone).date;
 }
 
 function shiftDate(value, days) {
@@ -85,12 +84,19 @@ function shiftDate(value, days) {
 }
 
 function renderDate() {
-  el("day-label").textContent = fullDate.format(asCalendarDate(activeDate));
-  el("date-picker-label").textContent = activeDate === today ? "Today" : shortDate.format(asCalendarDate(activeDate));
-  el("today-button").hidden = activeDate === today;
+  const splitToday = showingToday && localDates[0] !== localDates[1];
+  el("day-label").textContent = splitToday
+    ? taskLocations.map(({ city }, index) => shortDate.format(asCalendarDate(localDates[index])) + " in " + city).join(" · ")
+    : fullDate.format(asCalendarDate(dateForSlot(1)));
+  el("date-picker-label").textContent = showingToday ? "Today" : shortDate.format(asCalendarDate(activeDate));
+  el("today-button").hidden = showingToday;
   el("previous-day").disabled = activeDate === dateInput.min;
   el("next-day").disabled = activeDate === dateInput.max;
   dateInput.value = activeDate;
+}
+
+function dateForSlot(slot) {
+  return showingToday ? localDates[slot - 1] : activeDate;
 }
 
 function formatTime(time) {
@@ -99,10 +105,24 @@ function formatTime(time) {
   return (hours % 12 || 12) + ":" + String(minutes).padStart(2, "0") + " " + suffix;
 }
 
+function deadlineInZone(task, timeZone) {
+  const instant = taskDeadlineInstant(task);
+  if (instant === null) return { date: task.due_date, time: task.due_time };
+  return zonedDateTime(instant, timeZone);
+}
+
 function describeDeadline(task) {
-  const date = task.due_date === today ? "today" : shortDate.format(asCalendarDate(task.due_date));
-  const time = task.due_time ? " at " + formatTime(task.due_time) : "";
-  return "Due " + date + time;
+  const owner = task.owner_slot - 1;
+  const location = taskLocations[owner];
+  const local = deadlineInZone(task, location.timeZone);
+  const dueDate = local.date === localDates[owner] ? "today" : shortDate.format(asCalendarDate(local.date));
+  if (!local.time) return "Due " + dueDate;
+
+  const other = taskLocations[1 - owner];
+  const converted = deadlineInZone(task, other.timeZone);
+  const day = converted.date === local.date ? "" : " (" + shortDate.format(asCalendarDate(converted.date)) + ")";
+  return "Due " + dueDate + " at " + formatTime(local.time) + " " + location.city +
+    " · " + formatTime(converted.time) + " " + other.city + day;
 }
 
 function seedDemoTasks() {
@@ -122,10 +142,11 @@ function seedDemoTasks() {
     owner_slot: member + 1,
     title,
     notes: null,
-    planned_date: today,
+    planned_date: localDates[member],
     estimated_minutes: minutes,
-    due_date: today,
+    due_date: localDates[member],
     due_time: dueTime,
+    due_zone: taskLocations[member].timeZone,
     completed,
     created_at: new Date().toISOString(),
   }));
@@ -230,7 +251,7 @@ function renderPanel(slot) {
   const person = node("div", "person");
   const title = node("h3", "", name);
   title.id = "panel-title-" + slot;
-  person.append(title, node("p", "", completed + " of " + list.length + " complete"));
+  person.append(title, node("p", "", taskLocations[slot - 1].city + " · " + completed + " of " + list.length + " complete"));
   heading.append(avatar, person);
   if (canEdit) {
     const add = control("add-task button", "plus", "Add task");
@@ -264,7 +285,7 @@ function renderPanel(slot) {
 function renderColumns() {
   const focused = document.activeElement;
   const row = focused.closest(".task");
-  const oldPanel = focused.closest(".panel");
+  const oldPanel = columns.contains(focused) && focused.closest(".panel");
   columns.replaceChildren(renderPanel(1), renderPanel(2));
   if (!oldPanel) return;
 
@@ -275,10 +296,13 @@ function renderColumns() {
 }
 
 function sortedTasks(list) {
+  const dueKeys = new Map(list.map((task) => {
+    const local = deadlineInZone(task, taskLocations[task.owner_slot - 1].timeZone);
+    return [task.id, local.date ? local.date + "T" + (local.time || "23:59:59") : "9999"];
+  }));
   return list.sort((a, b) =>
     Number(a.completed) - Number(b.completed) ||
-    (a.due_date || "9999").localeCompare(b.due_date || "9999") ||
-    (a.due_time || "23:59:59").localeCompare(b.due_time || "23:59:59") ||
+    dueKeys.get(a.id).localeCompare(dueKeys.get(b.id)) ||
     a.created_at.localeCompare(b.created_at) ||
     a.id.localeCompare(b.id)
   );
@@ -307,18 +331,21 @@ function requestTasks(query, options) {
 
 async function refreshTasks(force = false) {
   const request = ++refreshId;
-  const date = activeDate;
+  const dates = taskLocations.map((_location, index) => dateForSlot(index + 1));
   let next;
 
   if (demoMode) {
-    next = demoTasks.filter((task) => task.planned_date === date);
+    next = demoTasks.filter((task) => task.planned_date === dates[task.owner_slot - 1]);
   } else {
     if (!sharedBoardConfigured) {
       showBoardError("The shared board is missing its Supabase settings.");
       return;
     }
     try {
-      next = await requestTasks({ select: taskSelect, planned_date: "eq." + date });
+      const filter = dates[0] === dates[1]
+        ? { planned_date: "eq." + dates[0] }
+        : { or: "(" + dates.map((date, index) => "and(owner_slot.eq." + (index + 1) + ",planned_date.eq." + date + ")").join(",") + ")" };
+      next = await requestTasks({ select: taskSelect, ...filter });
     } catch {
       if (request === refreshId) showBoardError("Couldn’t load tasks for this day.");
       return;
@@ -334,9 +361,10 @@ async function refreshTasks(force = false) {
   }
 }
 
-async function selectDate(date) {
-  if (date === activeDate) return;
+async function selectDate(date, { localToday = date === today && localDates.every((value) => value === date), force = false } = {}) {
+  if (!force && date === activeDate && localToday === showingToday) return;
   activeDate = date;
+  showingToday = localToday;
   renderDate();
   tasks = [];
   renderColumns();
@@ -346,10 +374,11 @@ async function selectDate(date) {
 
 function refreshToday() {
   const date = currentBoardDate();
-  if (date === today) return;
-  const wasToday = activeDate === today;
+  const dates = taskLocations.map(({ timeZone }) => currentBoardDate(timeZone));
+  if (date === today && dates.every((value, index) => value === localDates[index])) return;
   today = date;
-  if (wasToday) selectDate(today);
+  localDates = dates;
+  if (showingToday) selectDate(today, { localToday: true, force: true });
   else {
     renderDate();
     renderColumns();
@@ -396,15 +425,19 @@ async function toggleTask(task) {
 }
 
 function openTaskDialog(slot, task) {
-  taskDialogEntry = { task: task || { id: crypto.randomUUID(), owner_slot: slot }, isNew: !task };
+  const location = taskLocations[slot - 1];
+  const original = task ? deadlineInZone(task, location.timeZone) : { date: null, time: null };
+  const originalDue = { date: original.date, time: original.time?.slice(0, 5) ?? null };
+  taskDialogEntry = { task: task || { id: crypto.randomUUID(), owner_slot: slot }, isNew: !task, location, originalDue };
   taskForm.reset();
-  for (const field of ["title", "estimated_minutes", "due_date", "notes"]) {
+  for (const field of ["title", "estimated_minutes", "notes"]) {
     taskForm.elements.namedItem(field).value = task?.[field] ?? "";
   }
-  taskForm.elements.planned_date.value = task?.planned_date || activeDate;
-  taskForm.elements.due_time.value = task?.due_time?.slice(0, 5) ?? "";
+  taskForm.elements.planned_date.value = task?.planned_date || dateForSlot(slot);
+  taskForm.elements.due_date.value = originalDue.date ?? "";
+  taskForm.elements.due_time.value = originalDue.time ?? "";
   el("task-dialog-title").textContent = task ? "Edit task" : "Add a task";
-  el("task-dialog-person").textContent = boardNames[slot - 1];
+  el("task-dialog-person").textContent = boardNames[slot - 1] + " · " + location.city + " time";
   el("save-task").textContent = task ? "Save changes" : "Add task";
   setMessage(el("task-error"));
   taskDialog.showModal();
@@ -412,7 +445,7 @@ function openTaskDialog(slot, task) {
 
 async function submitTask(event) {
   event.preventDefault();
-  const { task, isNew } = taskDialogEntry;
+  const { task, isNew, location, originalDue } = taskDialogEntry;
   const data = new FormData(taskForm);
   const title = data.get("title").trim();
   if (!title) {
@@ -422,21 +455,28 @@ async function submitTask(event) {
   }
   const plannedDate = data.get("planned_date");
   const dueTime = data.get("due_time") || null;
+  const dueDate = data.get("due_date") || (dueTime ? plannedDate : null);
   const patch = {
     title,
     planned_date: plannedDate,
     estimated_minutes: Number(data.get("estimated_minutes")) || null,
-    due_date: data.get("due_date") || (dueTime ? plannedDate : null),
-    due_time: dueTime,
     notes: data.get("notes").trim() || null,
   };
+  if (isNew || dueDate !== originalDue.date || dueTime !== originalDue.time) {
+    if (dueTime && localTimeToInstant(dueDate, dueTime, location.timeZone) === null) {
+      setMessage(el("task-error"), "That time is skipped when the clocks change in " + location.city + ". Choose another time.");
+      taskForm.elements.due_time.focus();
+      return;
+    }
+    Object.assign(patch, { due_date: dueDate, due_time: dueTime, due_zone: location.timeZone });
+  }
 
   el("save-task").disabled = true;
   setMessage(el("task-error"));
   try {
     await saveChanges(task, patch, isNew);
     taskDialog.close();
-    if (plannedDate === activeDate) await refreshTasks();
+    if (plannedDate === dateForSlot(task.owner_slot)) await refreshTasks();
     else {
       await selectDate(plannedDate);
       el("board-title").focus();
@@ -483,7 +523,7 @@ function start() {
     el("board-note").textContent = "Demo tasks are saved in this browser.";
     demoTasks = loadDemoTasks();
   } else {
-    el("board-note").textContent = "Dates and times use " + config.timeZone.replaceAll("_", " ") + ".";
+    el("board-note").textContent = "Today follows each list’s local date. Timed deadlines show both time zones.";
   }
 
   board.hidden = false;
@@ -496,7 +536,10 @@ function start() {
 
 el("previous-day").addEventListener("click", () => selectDate(shiftDate(activeDate, -1)));
 el("next-day").addEventListener("click", () => selectDate(shiftDate(activeDate, 1)));
-el("today-button").addEventListener("click", () => selectDate(today));
+el("today-button").addEventListener("click", () => {
+  refreshToday();
+  selectDate(today, { localToday: true });
+});
 dateInput.addEventListener("change", () => {
   if (dateInput.validity.valid) selectDate(dateInput.value);
   else dateInput.value = activeDate;
@@ -506,7 +549,8 @@ taskForm.addEventListener("click", (event) => {
   const shortcut = event.target.closest("[data-day-offset]");
   if (!shortcut) return;
   const { dateField } = shortcut.closest("[data-date-field]").dataset;
-  taskForm.elements.namedItem(dateField).value = shiftDate(currentBoardDate(), Number(shortcut.dataset.dayOffset));
+  const localDate = currentBoardDate(taskDialogEntry.location.timeZone);
+  taskForm.elements.namedItem(dateField).value = shiftDate(localDate, Number(shortcut.dataset.dayOffset));
 });
 taskForm.addEventListener("submit", submitTask);
 el("delete-form").addEventListener("submit", submitDelete);
