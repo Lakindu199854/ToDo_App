@@ -233,25 +233,26 @@ h1, h2, h3, p { margin: 0; }
 }
 .task:hover, .task:focus-within { border-color: var(--accent-line); }
 .task.completed { background: #faf9fc; }
-.task-check {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin: 4px 1px 0 0;
-  padding: 0;
-  border: 1.5px solid #c8bfd5;
-  border-radius: 7px;
-  background: transparent;
-  color: transparent;
+.task-completion {
+  min-height: 32px;
+  margin-top: 7px;
+  padding: 3px 8px;
+  border-color: var(--accent-line);
+  background: #fff;
+  color: var(--accent-strong);
 }
-button.task-check::after { content: ""; position: absolute; inset: -6px; }
-button.task-check:hover { border-color: var(--accent); color: var(--accent); }
-.task-check .icon { width: 14px; height: 14px; stroke-width: 2.5; }
-.completed .task-check { background: var(--accent); border-color: var(--accent); color: #fff; }
-.completed button.task-check:hover { color: #fff; background: var(--accent-strong); }
+.task-completion:hover, .completed .task-completion { background: var(--accent-soft); }
+.completed .task-completion:hover { background: var(--accent-line); }
+.task-completion .icon {
+  width: 15px;
+  height: 15px;
+  padding: 1px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  stroke: transparent;
+  stroke-width: 2.5;
+}
+.completed .task-completion .icon { border-color: var(--accent); background: var(--accent); color: #fff; stroke: currentColor; }
 .task-body { min-width: 0; flex: 1; align-self: center; }
 .task-title { color: #302940; font-size: .9375rem; line-height: 1.32; font-weight: 700; overflow-wrap: anywhere; }
 .completed .task-title { color: #70677f; text-decoration: line-through; }
@@ -291,7 +292,7 @@ dialog::backdrop { background: #271a4766; }
 .dialog-content { display: grid; gap: 15px; padding: 24px; }
 .dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .dialog-heading .icon-button { margin: -7px -7px 0 0; }
-.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 13px; }
 .field { display: grid; gap: 6px; min-width: 0; color: #443953; font-size: .875rem; font-weight: 700; }
 .field input, .field textarea {
   width: 100%;
@@ -307,6 +308,8 @@ dialog::backdrop { background: #271a4766; }
 }
 .field textarea { resize: vertical; }
 .field input::placeholder, .field textarea::placeholder { color: #776c87; }
+.date-shortcuts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.date-shortcuts .button { min-height: 32px; padding: 3px 8px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 3px; }
 .form-error { color: #9b2447; font-size: .875rem; line-height: 1.4; }
 .delete-task-name { color: var(--muted); overflow-wrap: anywhere; }

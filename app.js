@@ -78,9 +78,9 @@ function currentBoardDate() {
   return [parts.year, parts.month, parts.day].join("-");
 }
 
-function moveDate(direction) {
-  const date = asCalendarDate(activeDate);
-  date.setUTCDate(date.getUTCDate() + direction);
+function shiftDate(value, days) {
+  const date = asCalendarDate(value);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
@@ -100,10 +100,9 @@ function formatTime(time) {
 }
 
 function describeDeadline(task) {
-  const time = task.due_time ? formatTime(task.due_time) : "";
-  if (task.due_date === task.planned_date) return time ? "Due " + time : "Due that day";
-  const date = shortDate.format(asCalendarDate(task.due_date));
-  return "Due " + date + (time ? " at " + time : "");
+  const date = task.due_date === today ? "today" : shortDate.format(asCalendarDate(task.due_date));
+  const time = task.due_time ? " at " + formatTime(task.due_time) : "";
+  return "Due " + date + time;
 }
 
 function seedDemoTasks() {
@@ -162,10 +161,11 @@ function storeDemoTasks(next) {
 function renderTask(task) {
   const row = node("li", "task" + (task.completed ? " completed" : ""));
   row.dataset.taskId = task.id;
-  const check = control("task-check", "check");
+  const completionLabel = task.completed ? "Task completed" : "Mark complete";
+  const check = control("task-completion button", "check", completionLabel);
   check.setAttribute("role", "checkbox");
   check.setAttribute("aria-checked", String(task.completed));
-  check.setAttribute("aria-label", task.title);
+  check.setAttribute("aria-label", completionLabel + " for " + task.title);
   check.addEventListener("click", () => toggleTask(task));
 
   const body = node("div", "task-body");
@@ -183,7 +183,8 @@ function renderTask(task) {
   }
   if (meta.childElementCount) body.append(meta);
   if (task.notes) body.append(node("p", "task-notes", task.notes));
-  row.append(check, body);
+  body.append(check);
+  row.append(body);
 
   const menu = node("details", "task-menu");
   const summary = node("summary", "icon-button");
@@ -269,7 +270,7 @@ function renderColumns() {
 
   const panel = columns.querySelector('[data-slot="' + oldPanel.dataset.slot + '"]');
   const newRow = row && Array.from(panel.querySelectorAll(".task")).find((item) => item.dataset.taskId === row.dataset.taskId);
-  const action = focused.matches(".task-check") ? ".task-check" : "summary";
+  const action = focused.matches(".task-completion") ? ".task-completion" : "summary";
   (newRow?.querySelector(action) || panel.querySelector(".add-task"))?.focus({ preventScroll: true });
 }
 
@@ -345,7 +346,10 @@ function refreshToday() {
   const wasToday = activeDate === today;
   today = date;
   if (wasToday) selectDate(today);
-  else renderDate();
+  else {
+    renderDate();
+    renderColumns();
+  }
 }
 
 async function saveChanges(task, patch, isNew = false) {
@@ -486,14 +490,20 @@ function start() {
   refreshTasks();
 }
 
-el("previous-day").addEventListener("click", () => selectDate(moveDate(-1)));
-el("next-day").addEventListener("click", () => selectDate(moveDate(1)));
+el("previous-day").addEventListener("click", () => selectDate(shiftDate(activeDate, -1)));
+el("next-day").addEventListener("click", () => selectDate(shiftDate(activeDate, 1)));
 el("today-button").addEventListener("click", () => selectDate(today));
 dateInput.addEventListener("change", () => {
   if (dateInput.validity.valid) selectDate(dateInput.value);
   else dateInput.value = activeDate;
 });
 el("board-retry").addEventListener("click", () => refreshTasks(true));
+taskForm.addEventListener("click", (event) => {
+  const shortcut = event.target.closest("[data-day-offset]");
+  if (!shortcut) return;
+  const { dateField } = shortcut.closest("[data-date-field]").dataset;
+  taskForm.elements.namedItem(dateField).value = shiftDate(currentBoardDate(), Number(shortcut.dataset.dayOffset));
+});
 taskForm.addEventListener("submit", submitTask);
 el("delete-form").addEventListener("submit", submitDelete);
 
