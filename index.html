@@ -3,6 +3,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // A phone browser can fall back to a wide viewport when restoring a page.
+    (() => {
+      if (!navigator.maxTouchPoints || Math.min(screen.width, screen.height) > 600) return;
+      const viewport = document.querySelector('meta[name="viewport"]');
+      const defaultContent = viewport.content;
+      let correctedWidth = 0;
+      let attempted = false;
+
+      function restorePhoneWidth() {
+        const { width, height, orientation } = screen;
+        const landscape = orientation?.type?.startsWith("landscape")
+          ?? (Number.isFinite(window.orientation) ? Math.abs(window.orientation) === 90 : width > height);
+        const phoneWidth = landscape ? Math.max(width, height) : Math.min(width, height);
+        if (!phoneWidth) return;
+
+        if (correctedWidth && correctedWidth !== phoneWidth) {
+          viewport.content = defaultContent;
+          correctedWidth = 0;
+          attempted = false;
+        }
+
+        if (document.documentElement.clientWidth <= phoneWidth + 32) {
+          attempted = false;
+          return;
+        }
+        if (attempted) return;
+
+        attempted = true;
+        correctedWidth = phoneWidth;
+        const corrected = "width=" + phoneWidth + ", initial-scale=1";
+        if (viewport.content === corrected) viewport.content = defaultContent;
+        viewport.content = corrected;
+      }
+
+      window.addEventListener("pageshow", restorePhoneWidth);
+      window.addEventListener("resize", restorePhoneWidth);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) restorePhoneWidth();
+      });
+      restorePhoneWidth();
+    })();
+  </script>
   <meta name="theme-color" content="#f8f7fc">
   <meta name="description" content="A shared board for daily tasks and weekly planning.">
   <title>Task Board</title>
