@@ -4,15 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f8f7fc">
-  <meta name="description" content="The daily task board for Lakindu and Milanka.">
-  <title>Lakindu &amp; Milanka — Daily Tasks</title>
+  <meta name="description" content="A shared board for daily tasks and weekly planning.">
+  <title>Task Board</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=2">
+  <link rel="stylesheet" href="./styles.css?v=3">
   <script src="./config.js" defer></script>
-  <script src="./app.js?v=2" defer></script>
+  <script src="./app.js?v=3" defer></script>
+  <script src="./planning.js" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -34,7 +35,7 @@
     <div class="topbar-inner shell">
       <div class="brand">
         <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-pair"></use></svg></span>
-        <span>Lakindu &amp; Milanka</span>
+        <span>Task Board</span>
       </div>
       <span id="mode-badge" class="mode-badge" hidden><span></span><span id="mode-label"></span></span>
     </div>
@@ -43,8 +44,8 @@
   <main class="shell">
     <section class="hero" aria-labelledby="welcome-title">
       <div class="hero-copy">
-        <h1 id="welcome-title">Plan your <em>day.</em></h1>
-        <p>Add tasks, set deadlines, and track what’s done.</p>
+        <h1 id="welcome-title">Plan your <em id="hero-period">day.</em></h1>
+        <p id="hero-description">Add tasks, set deadlines, and track what’s done.</p>
       </div>
       <div class="hero-art" aria-hidden="true">
         <span class="orbit orbit-large"></span><span class="orbit orbit-small"></span>
@@ -60,6 +61,11 @@
         </span>
       </div>
     </section>
+
+    <nav class="view-tabs" aria-label="Board sections">
+      <a id="tasks-tab" href="#tasks" aria-current="page">Daily tasks</a>
+      <a id="planning-tab" href="#planning">Weekly planning</a>
+    </nav>
 
     <section id="board" class="board" aria-labelledby="board-title" hidden>
       <div class="board-heading">
@@ -93,6 +99,33 @@
       <footer class="board-footer">
         <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
         <span id="board-note"></span>
+      </footer>
+    </section>
+
+    <section id="planning-board" class="board" aria-labelledby="planning-title" hidden>
+      <div class="board-heading">
+        <div>
+          <h2 id="planning-title">Weekly planning</h2>
+          <p id="planning-week-label" aria-live="polite"></p>
+        </div>
+        <div class="date-nav" role="group" aria-label="Choose a planning week">
+          <button id="previous-week" class="icon-button" type="button" aria-label="Previous week">
+            <svg class="icon" aria-hidden="true"><use href="#i-left"></use></svg>
+          </button>
+          <button id="current-week" class="quiet button" type="button">This week</button>
+          <button id="next-week" class="icon-button" type="button" aria-label="Next week">
+            <svg class="icon" aria-hidden="true"><use href="#i-right"></use></svg>
+          </button>
+        </div>
+      </div>
+      <div id="planning-error" class="board-error" hidden>
+        <span role="alert">Couldn’t load the planning notes.</span>
+        <button id="planning-retry" class="quiet button" type="button">Refresh</button>
+      </div>
+      <div id="planning-columns" class="columns"></div>
+      <footer class="board-footer">
+        <svg class="icon" aria-hidden="true"><use href="#i-calendar"></use></svg>
+        <span>Planning weeks run Sunday to Saturday.</span>
       </footer>
     </section>
   </main>

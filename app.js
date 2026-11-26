@@ -284,8 +284,8 @@ function sortedTasks(list) {
   );
 }
 
-async function requestTasks(query, { method = "GET", data, returnRows = false } = {}) {
-  const url = new URL("/rest/v1/daily_tasks", config.supabaseUrl);
+async function requestBoardRows(table, query, { method = "GET", data, returnRows = false } = {}) {
+  const url = new URL("/rest/v1/" + table, config.supabaseUrl);
   url.search = new URLSearchParams(query).toString();
   const headers = { apikey: config.supabasePublishableKey };
   if (data) headers["Content-Type"] = "application/json";
@@ -296,9 +296,13 @@ async function requestTasks(query, { method = "GET", data, returnRows = false } 
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw Object.assign(new Error("Task request failed."), { code: error.code });
+    throw Object.assign(new Error("Board request failed."), { code: error.code });
   }
   if (method === "GET" || returnRows) return response.json();
+}
+
+function requestTasks(query, options) {
+  return requestBoardRows("daily_tasks", query, options);
 }
 
 async function refreshTasks(force = false) {

@@ -126,7 +126,11 @@ h1, h2, h3, p { margin: 0; }
 .art-dot-one { top: 139px; left: 26px; }
 .art-dot-two { top: 29px; right: 31px; background: #d792c3; }
 
-.board { margin-top: 33px; }
+.view-tabs { display: flex; flex-wrap: wrap; gap: 4px; width: fit-content; margin-top: 21px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--white); }
+.view-tabs a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-size: .875rem; font-weight: 700; text-decoration: none; }
+.view-tabs a:hover { background: #f6f2fc; }
+.view-tabs a[aria-current="page"] { background: #eee6ff; color: var(--purple); }
+.board { margin-top: 23px; }
 .board-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 21px; }
 .board-heading h2 { font: 800 1.65rem/1.2 var(--heading); letter-spacing: -.045em; }
 .board-heading p { margin-top: 5px; color: var(--muted); font-size: .9375rem; }
@@ -199,6 +203,14 @@ h1, h2, h3, p { margin: 0; }
   --avatar-bg: #f8e1ed;
   --panel-top: #fffbfd;
 }
+.planning-panel { min-height: 0; }
+.planning-form { display: grid; gap: 12px; margin-top: 17px; }
+.planning-form textarea { min-height: 175px; line-height: 1.5; }
+.planning-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.planning-status { flex: 1 1 140px; color: var(--muted); font-size: .875rem; }
+.planning-save { background: var(--accent-soft); color: var(--accent-strong); }
+.planning-save:hover { background: var(--accent-line); }
+.planning-save:disabled { cursor: default; }
 .panel-heading { display: flex; align-items: center; gap: 11px; }
 .avatar {
   display: grid;
@@ -325,7 +337,8 @@ dialog::backdrop { background: #271a4766; }
   .hero h1 { max-width: 11ch; }
   .hero p { max-width: 27ch; font-size: .9375rem; margin-top: 8px; }
   .hero-art { transform: scale(.57); }
-  .board { margin-top: 25px; }
+  .view-tabs { margin-top: 17px; }
+  .board { margin-top: 19px; }
   .board-heading { margin-bottom: 15px; }
   .board-heading h2 { font-size: 1.45rem; }
   .board-heading p { font-size: .875rem; }
